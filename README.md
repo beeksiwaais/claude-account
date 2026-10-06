@@ -14,6 +14,8 @@ claude account add personal
 claude account use work
 claude account list
 claude account current
+claude account status
+claude account auto
 claude account remove personal
 
 claude
@@ -21,7 +23,9 @@ claude "fix this bug in main.py"
 ```
 
 Claude Code itself performs login, logout, credential storage, and token
-refresh. `claude-account` never reads or copies credential contents.
+refresh. `claude-account` never copies, stores, or writes credentials. The one
+exception is `claude account status`, which reads each profile's access token so
+it can ask Anthropic for that account's usage limits.
 
 > [!IMPORTANT]
 > This is an independent community project. It is not made, endorsed, or
@@ -150,6 +154,48 @@ claude account current
 
 `current` prints only the profile name, making it safe to use in scripts.
 
+### Check usage limits
+
+```bash
+claude account status
+```
+
+```text
+* work      max
+    5h      █████████████░░░░░░░   65% left  resets in 2h 14m
+    weekly  ██████████████████░░   88% left  resets in 4d 3h
+
+  personal  pro
+    5h      ████░░░░░░░░░░░░░░░░   19% left  resets in 47m
+    weekly  ██████████░░░░░░░░░░   48% left  resets in 2d 6h
+```
+
+`status` shows how much of each account's 5-hour and weekly subscription limit
+is still available: a full green bar means the whole limit is left. It reads
+the profile's OAuth access token from `.credentials.json` or, on macOS, from
+the profile's Keychain item, and sends it in a single HTTPS request to
+Anthropic's `api.anthropic.com/api/oauth/usage` endpoint. The token is never
+stored, printed, or refreshed. If a token has expired, start `claude` with that
+profile once so Claude Code can refresh it.
+On macOS the first run may ask for permission to read each Keychain item.
+
+### Switch to the account with the most usage left
+
+```bash
+claude account auto
+```
+
+`auto` checks every profile the same way as `status` and switches to the one
+that can do the most work in the next five hours. An account's available share
+is the smaller of its 5-hour and weekly remaining limits, so an account whose
+weekly limit is used up is never chosen even if its 5-hour window is fresh.
+Ties keep the active profile. Profiles whose usage cannot be read are skipped,
+and nothing changes if every account is exhausted.
+
+The usage endpoint is not a documented public API, so this command may stop
+working if Anthropic changes it. Colors are disabled when output is not a
+terminal or when `NO_COLOR` is set.
+
 ### Remove an account
 
 ```bash
@@ -237,8 +283,9 @@ overrides inherited values for every managed Claude process. It checks the
 Claude Code version before login, launch, and logout on macOS so an older global
 Keychain entry cannot silently select or log out the wrong account.
 
-claude-account never reads, copies, or writes Keychain credential contents;
-Claude Code continues to own login, token refresh, and secure storage.
+claude-account never copies or writes Keychain credential contents, and reads
+them only for `claude account status`; Claude Code continues to own login,
+token refresh, and secure storage.
 
 ## Authentication environment variables
 

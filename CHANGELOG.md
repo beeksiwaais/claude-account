@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- `claude account status` shows each profile's 5-hour and weekly subscription
+  usage with progress bars and reset times. It reads each profile's OAuth
+  access token for one request to Anthropic's usage endpoint and never stores
+  or refreshes it.
+- `claude account auto` switches to the profile with the most usage available
+  over the next five hours, taking the weekly limit into account.
+
 ## [0.2.0] - 2026-08-04
 
 ### Added

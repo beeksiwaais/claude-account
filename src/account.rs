@@ -14,6 +14,7 @@ use serde_json::{Map, Value};
 use crate::paths::AppPaths;
 use crate::process;
 use crate::state::{self, Profile, ProfileReservation, StateLock};
+use crate::usage;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -48,6 +49,10 @@ enum AccountCommand {
     List,
     /// Print only the active profile name
     Current,
+    /// Show the 5-hour and weekly usage limits of every profile
+    Status,
+    /// Switch to the profile with the most usage available for the next 5 hours
+    Auto,
     /// Safely unregister one exact name from legacy case-colliding state
     ResolveCaseCollision {
         /// Exact profile name to unregister
@@ -86,6 +91,8 @@ impl AccountCli {
             AccountCommand::Use { name } => use_profile(paths, &name),
             AccountCommand::List => list(paths),
             AccountCommand::Current => current(paths),
+            AccountCommand::Status => usage::status(paths),
+            AccountCommand::Auto => auto(paths),
             AccountCommand::ResolveCaseCollision { name } => resolve_case_collision(paths, &name),
             AccountCommand::Remove {
                 name,
@@ -248,6 +255,15 @@ fn use_profile(paths: &AppPaths, name: &str) -> Result<()> {
     state::save(paths, &state)?;
     println!("Now using `{name}` for new Claude processes.");
     Ok(())
+}
+
+fn auto(paths: &AppPaths) -> Result<()> {
+    let best = usage::best_profile(paths)?;
+    if state::load(paths)?.active.as_deref() == Some(best.as_str()) {
+        println!("Staying on `{best}`; it has the most usage available.");
+        return Ok(());
+    }
+    use_profile(paths, &best)
 }
 
 fn list(paths: &AppPaths) -> Result<()> {

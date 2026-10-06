@@ -2,6 +2,7 @@ mod account;
 mod paths;
 mod process;
 mod state;
+mod usage;
 
 use std::env;
 use std::ffi::OsString;
